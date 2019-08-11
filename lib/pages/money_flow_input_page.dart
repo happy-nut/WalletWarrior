@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-
-import 'package:wallet_warrior/pages/dial_pad.dart';
+import 'package:wallet_warrior/widgets/dial_pad.dart';
+import 'package:wallet_warrior/widgets/rounded_button.dart';
 
 class MoneyFlowInputPage extends StatefulWidget {
   MoneyFlowInputPage({Key key, this.title}) : super(key: key);
@@ -15,10 +15,8 @@ class MoneyFlowInputPage extends StatefulWidget {
 enum InputStage { money, date, category }
 
 class _MoneyFlowInputPageState extends State<MoneyFlowInputPage> {
-  static final _titles = ['수입/지출액 입력', '날짜 입력', '카테고리 입력'];
-
   // TODO(wonjerry): Get categories from google spread sheet.
-  static final dropdownItems = [
+  static final _dropdownItems = [
     '투자',
     '대출 이자 및 상환',
     '저축',
@@ -35,53 +33,26 @@ class _MoneyFlowInputPageState extends State<MoneyFlowInputPage> {
     '대출',
     '기타 수입'
   ];
+
   InputStage _currentStage = InputStage.money;
-  String _dialTitle = "0";
-
-  int _inputAmount = 0;
+  int _amount = 0;
   DateTime _inputDate = DateTime.now();
-  String _inputCategory = dropdownItems[0];
+  String _inputCategory = _dropdownItems.first;
 
-  Widget _confirmButton() {
-    return SizedBox(
-      height: 46,
-      width: 120,
-      child: RaisedButton(
-          elevation: 4.0,
-          color: Theme.of(context).buttonColor,
-          child: Text(
-            '확인',
-            style: Theme.of(context)
-                .textTheme
-                .button
-                .copyWith(color: Colors.white),
-          ),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(23.0)),
-          onPressed: _goToNextStage),
-    );
-  }
-
-  Future _selectDate(BuildContext context) async {
+  Future<void> _selectDate() async {
     final thisYear = DateTime.now().year;
     final DateTime picked = await showDatePicker(
         context: context,
         initialDate: _inputDate,
         firstDate: DateTime(thisYear - 3),
         lastDate: DateTime(thisYear + 3));
+
     if (picked == null || picked == _inputDate) {
       return;
     }
 
     setState(() {
       _inputDate = picked;
-    });
-  }
-
-  void _updateNumber(int number) {
-    _inputAmount = number;
-    setState(() {
-      _dialTitle = _inputAmount.toString();
     });
   }
 
@@ -107,28 +78,32 @@ class _MoneyFlowInputPageState extends State<MoneyFlowInputPage> {
     return DateFormat('yyyy.MM.dd').format(_inputDate);
   }
 
-  Widget _buildMoneyInput() {
-    double _opacity = 0.0;
-    if (_dialTitle != '0') {
-      _opacity = 1.0;
+  String getStageTitle(InputStage stage) {
+    switch (stage) {
+      case InputStage.money:
+        return '수입/지출액 입력';
+      case InputStage.date:
+        return '날짜 입력';
+      case InputStage.category:
+        return '카테고리 입력';
     }
 
+    assert(false);
+    return null;
+  }
+
+  void onNumberConfirmed(int number) {
+    _amount = number;
+    _goToNextStage();
+  }
+
+  Widget _buildMoneyInput() {
     return Offstage(
       offstage: _currentStage != InputStage.money,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          Center(
-            child: Text(
-              '$_dialTitle 원',
-              style: Theme.of(context).textTheme.display2,
-            ),
-          ),
-          DialPad(numberChanged: _updateNumber),
-          Opacity(
-            opacity: _opacity,
-            child: Center(child: _confirmButton()),
-          )
+          DialPad(onNumberConfirmed: onNumberConfirmed),
         ],
       ),
     );
@@ -136,24 +111,23 @@ class _MoneyFlowInputPageState extends State<MoneyFlowInputPage> {
 
   Widget _buildDateInput() {
     return Offstage(
-        offstage: _currentStage != InputStage.date,
-        child: Center(
-          child: Column(
-            children: <Widget>[
-              FlatButton(
-                child: Text(
-                  _getSelectedDateDisplayString(),
-                  style: Theme.of(context).textTheme.display2,
-                ),
-                onPressed: () => _selectDate(context),
+      offstage: _currentStage != InputStage.date,
+      child: Center(
+        child: Column(
+          children: <Widget>[
+            FlatButton(
+              child: Text(
+                _getSelectedDateDisplayString(),
+                style: Theme.of(context).textTheme.display2,
               ),
-              Padding(
-                padding: const EdgeInsets.only(top: 48.0),
-                child: _confirmButton(),
-              ),
-            ],
-          ),
-        ));
+              onPressed: _selectDate,
+            ),
+            const SizedBox(height: 48.0),
+            RoundedButton(onPressed: _goToNextStage),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildCategoryInput() {
@@ -163,22 +137,20 @@ class _MoneyFlowInputPageState extends State<MoneyFlowInputPage> {
         children: <Widget>[
           DropdownButton(
             value: _inputCategory,
-            items: dropdownItems.map<DropdownMenuItem<String>>((String value) {
-              return DropdownMenuItem<String>(
-                value: value,
-                child: Text(value),
-              );
-            }).toList(),
-            onChanged: (String newValue) {
+            onChanged: (newValue) {
               setState(() {
                 _inputCategory = newValue;
               });
             },
+            items: _dropdownItems.map((value) {
+              return DropdownMenuItem(
+                value: value,
+                child: Text(value),
+              );
+            }).toList(),
           ),
-          Padding(
-            padding: const EdgeInsets.only(top: 48.0),
-            child: _confirmButton(),
-          )
+          const SizedBox(height: 48.0),
+          RoundedButton(onPressed: _goToNextStage)
         ],
       ),
     );
@@ -193,26 +165,22 @@ class _MoneyFlowInputPageState extends State<MoneyFlowInputPage> {
       body: Padding(
         padding: const EdgeInsets.all(12.0),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Padding(
-              padding: const EdgeInsets.only(bottom: 64.0),
-              child: Row(
-                children: <Widget>[
-                  Text(
-                    "${_titles[_currentStage.index]}",
-                    style: Theme.of(context).textTheme.display1,
-                  ),
-                ],
-              ),
+            Text(
+              getStageTitle(_currentStage),
+              style: Theme.of(context).textTheme.display1,
             ),
+            const SizedBox(height: 64.0),
             Expanded(
               child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: <Widget>[
-                    _buildMoneyInput(),
-                    _buildDateInput(),
-                    _buildCategoryInput(),
-                  ]),
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  _buildMoneyInput(),
+                  _buildDateInput(),
+                  _buildCategoryInput(),
+                ],
+              ),
             ),
           ],
         ),
