@@ -12,8 +12,10 @@ class MoneyFlowInputPage extends StatefulWidget {
   _MoneyFlowInputPageState createState() => _MoneyFlowInputPageState();
 }
 
+enum InputStage { money, date, category }
+
 class _MoneyFlowInputPageState extends State<MoneyFlowInputPage> {
-  static final titles = ['수입/지출액 입력', '날짜 입력', '카테고리 입력'];
+  static final _titles = ['수입/지출액 입력', '날짜 입력', '카테고리 입력'];
 
   // TODO(wonjerry): Get categories from google spread sheet.
   static final dropdownItems = [
@@ -33,12 +35,12 @@ class _MoneyFlowInputPageState extends State<MoneyFlowInputPage> {
     '대출',
     '기타 수입'
   ];
-  int stage = 0;
-  String dialTitle = "0";
+  InputStage _currentStage = InputStage.money;
+  String _dialTitle = "0";
 
-  int amount = 0;
-  DateTime selectedDate = DateTime.now();
-  String selectedCategory = dropdownItems[0];
+  int _inputAmount = 0;
+  DateTime _inputDate = DateTime.now();
+  String _inputCategory = dropdownItems[0];
 
   Widget _confirmButton() {
     return SizedBox(
@@ -60,38 +62,126 @@ class _MoneyFlowInputPageState extends State<MoneyFlowInputPage> {
     );
   }
 
-  Future<Null> _selectDate(BuildContext context) async {
+  Future _selectDate(BuildContext context) async {
     final thisYear = DateTime.now().year;
     final DateTime picked = await showDatePicker(
         context: context,
-        initialDate: selectedDate,
+        initialDate: _inputDate,
         firstDate: DateTime(thisYear - 3),
         lastDate: DateTime(thisYear + 3));
-    if (picked != null && picked != selectedDate)
-      setState(() {
-        selectedDate = picked;
-      });
-  }
-
-  _updateNumber(int number) {
-    amount = number;
-    setState(() {
-      dialTitle = amount.toString();
-    });
-  }
-
-  _goToNextStage() {
-    if (stage == 2) {
-      // TODO(hyugnsun): Handle this.
+    if (picked == null || picked == _inputDate) {
       return;
     }
+
     setState(() {
-      stage++;
+      _inputDate = picked;
     });
   }
 
-  _getSelectedDateDisplayString() {
-    return DateFormat('yyyy.MM.dd').format(selectedDate);
+  void _updateNumber(int number) {
+    _inputAmount = number;
+    setState(() {
+      _dialTitle = _inputAmount.toString();
+    });
+  }
+
+  void _goToNextStage() {
+    switch (_currentStage) {
+      case InputStage.money:
+        setState(() {
+          _currentStage = InputStage.date;
+        });
+        break;
+      case InputStage.date:
+        setState(() {
+          _currentStage = InputStage.category;
+        });
+        break;
+      case InputStage.category:
+        // TODO(hyugnsun): Handle this case.
+        return;
+    }
+  }
+
+  String _getSelectedDateDisplayString() {
+    return DateFormat('yyyy.MM.dd').format(_inputDate);
+  }
+
+  Widget _buildMoneyInput() {
+    double _opacity = 0.0;
+    if (_dialTitle != '0') {
+      _opacity = 1.0;
+    }
+
+    return Offstage(
+      offstage: _currentStage != InputStage.money,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Center(
+            child: Text(
+              '$_dialTitle 원',
+              style: Theme.of(context).textTheme.display2,
+            ),
+          ),
+          DialPad(numberChanged: _updateNumber),
+          Opacity(
+            opacity: _opacity,
+            child: Center(child: _confirmButton()),
+          )
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDateInput() {
+    return Offstage(
+        offstage: _currentStage != InputStage.date,
+        child: Center(
+          child: Column(
+            children: <Widget>[
+              FlatButton(
+                child: Text(
+                  _getSelectedDateDisplayString(),
+                  style: Theme.of(context).textTheme.display2,
+                ),
+                onPressed: () => _selectDate(context),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(top: 48.0),
+                child: _confirmButton(),
+              ),
+            ],
+          ),
+        ));
+  }
+
+  Widget _buildCategoryInput() {
+    return Offstage(
+      offstage: _currentStage != InputStage.category,
+      child: Column(
+        children: <Widget>[
+          DropdownButton(
+            value: _inputCategory,
+            items: dropdownItems.map<DropdownMenuItem<String>>((String value) {
+              return DropdownMenuItem<String>(
+                value: value,
+                child: Text(value),
+              );
+            }).toList(),
+            onChanged: (String newValue) {
+              setState(() {
+                _inputCategory = newValue;
+              });
+            },
+          ),
+          Padding(
+            padding: const EdgeInsets.only(top: 48.0),
+            child: _confirmButton(),
+          )
+        ],
+      ),
+    );
   }
 
   @override
@@ -100,94 +190,33 @@ class _MoneyFlowInputPageState extends State<MoneyFlowInputPage> {
       appBar: AppBar(
         title: Text(widget.title),
       ),
-      body: Column(children: [
-        Padding(
-          padding: const EdgeInsets.all(12.0),
-          child: Column(
-            children: <Widget>[
-              Padding(
-                padding: const EdgeInsets.only(bottom: 64.0),
-                child: Row(
-                  children: <Widget>[
-                    Text(
-                      "${titles[stage]}",
-                      style: Theme.of(context).textTheme.display1,
-                    ),
-                  ],
-                ),
+      body: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Column(
+          children: <Widget>[
+            Padding(
+              padding: const EdgeInsets.only(bottom: 64.0),
+              child: Row(
+                children: <Widget>[
+                  Text(
+                    "${_titles[_currentStage.index]}",
+                    style: Theme.of(context).textTheme.display1,
+                  ),
+                ],
               ),
-              Column(
+            ),
+            Expanded(
+              child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: <Widget>[
-                    Offstage(
-                      offstage: stage != 0,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: <Widget>[
-                          Center(
-                            child: Text(
-                              '$dialTitle 원',
-                              style: Theme.of(context).textTheme.display2,
-                            ),
-                          ),
-                          DialPad(numberChanged: _updateNumber),
-                          Offstage(
-                            offstage: dialTitle == '0',
-                            child: Center(child: _confirmButton()),
-                          )
-                        ],
-                      ),
-                    ),
-                    Offstage(
-                        offstage: stage != 1,
-                        child: Center(
-                          child: Column(
-                            children: <Widget>[
-                              FlatButton(
-                                child: Text(
-                                  _getSelectedDateDisplayString(),
-                                  style: Theme.of(context).textTheme.display2,
-                                ),
-                                onPressed: () => _selectDate(context),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.only(top: 48.0),
-                                child: _confirmButton(),
-                              ),
-                            ],
-                          ),
-                        )),
-                    Offstage(
-                      offstage: stage != 2,
-                      child: Column(
-                        children: <Widget>[
-                          DropdownButton(
-                            value: selectedCategory,
-                            items: dropdownItems
-                                .map<DropdownMenuItem<String>>((String value) {
-                              return DropdownMenuItem<String>(
-                                value: value,
-                                child: Text(value),
-                              );
-                            }).toList(),
-                            onChanged: (String newValue) {
-                              setState(() {
-                                selectedCategory = newValue;
-                              });
-                            },
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.only(top: 48.0),
-                            child: _confirmButton(),
-                          )
-                        ],
-                      ),
-                    ),
+                    _buildMoneyInput(),
+                    _buildDateInput(),
+                    _buildCategoryInput(),
                   ]),
-            ],
-          ),
+            ),
+          ],
         ),
-      ]),
+      ),
     );
   }
 }
