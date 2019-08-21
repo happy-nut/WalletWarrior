@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-
-import 'package:wallet_warrior/pages/money_flow_input_page.dart';
+import 'pages/home_page.dart';
 
 void main() => runApp(WalletWarrior());
 
@@ -31,9 +30,8 @@ class WalletWarrior extends StatelessWidget {
           button: TextStyle(fontSize: 14.0, fontWeight: FontWeight.bold),
         ),
       ),
-      // TODO(hyungsun): Wrap below with proper wrapper. maybe tab bar?
       // TODO(hyungsun): Consider localization.
-      home: MoneyFlowInputPage(title: '수입/지출'),
+      home: HomePage(title: 'Wallet Warrior'),
     );
   }
 }

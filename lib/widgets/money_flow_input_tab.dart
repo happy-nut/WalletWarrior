@@ -3,18 +3,18 @@ import 'package:intl/intl.dart';
 import 'package:wallet_warrior/widgets/dial_pad.dart';
 import 'package:wallet_warrior/widgets/rounded_button.dart';
 
-class MoneyFlowInputPage extends StatefulWidget {
-  MoneyFlowInputPage({Key key, this.title}) : super(key: key);
+class MoneyFlowInputTab extends StatefulWidget {
+  MoneyFlowInputTab({Key key, this.title}) : super(key: key);
 
   final String title;
 
   @override
-  _MoneyFlowInputPageState createState() => _MoneyFlowInputPageState();
+  _MoneyFlowInputTabState createState() => _MoneyFlowInputTabState();
 }
 
 enum InputStage { money, date, category }
 
-class _MoneyFlowInputPageState extends State<MoneyFlowInputPage> {
+class _MoneyFlowInputTabState extends State<MoneyFlowInputTab> {
   // TODO(wonjerry): Get categories from google spread sheet.
   static final _dropdownItems = [
     '투자',
@@ -81,7 +81,7 @@ class _MoneyFlowInputPageState extends State<MoneyFlowInputPage> {
   String getStageTitle(InputStage stage) {
     switch (stage) {
       case InputStage.money:
-        return '수입/지출액 입력';
+        return widget.title;
       case InputStage.date:
         return '날짜 입력';
       case InputStage.category:
@@ -158,32 +158,27 @@ class _MoneyFlowInputPageState extends State<MoneyFlowInputPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.title),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Text(
-              getStageTitle(_currentStage),
-              style: Theme.of(context).textTheme.display1,
+    return Padding(
+      padding: const EdgeInsets.all(12.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            getStageTitle(_currentStage),
+            style: Theme.of(context).textTheme.display1,
+          ),
+          const SizedBox(height: 64.0),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                _buildMoneyInput(),
+                _buildDateInput(),
+                _buildCategoryInput(),
+              ],
             ),
-            const SizedBox(height: 64.0),
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  _buildMoneyInput(),
-                  _buildDateInput(),
-                  _buildCategoryInput(),
-                ],
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
